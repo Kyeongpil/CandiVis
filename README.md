@@ -5,6 +5,9 @@
 It is visualization system that visualize Korean 19th presidential election candidates using embedding method(word2vec) with news articles.
 
 
+![페이지 화면](images/image.png)
+
+
 ## Dependency
 
 * python 3.x version (Anaconda)

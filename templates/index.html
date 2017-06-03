@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <script src="https://d3js.org/d3.v3.min.js"></script>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='js/semantic_ui/semantic.min.css')}}">
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+    <script src="{{url_for('static',filename='js/semantic_ui/semantic.min.js')}}"></script>
+    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/earlyaccess/nanumbrushscript.css">
+    <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/graph_style.css')}}">
+    <link rel="stylesheet" type="text/css" href="{{url_for('static',filename='css/style.css')}}">
+    <script>
+    var candidate = {{ candidates | tojson }};
+    candidate.forEach(function(d, i) { d.pos = [d.rate, d.rate]; });
+    var maxRate = d3.max(candidate, function(d) { return d.rate; });
+
+    $(function() {
+        $('.ui.search')
+        .search({
+            apiSettings: { url: 'http://163.152.20.64:5015/recommend_words?query={query}' },
+            fields: {
+                results: 'words',
+                title: 'word',
+            },
+            minCharacters: 2,
+            maxResults: 5,
+        });
+    });
+
+    $(function() {
+        $('.button').bind('click', function() {
+            var query_words = [],
+                query_boxes = $('.axisWord');
+
+            for(var i=0; i<query_boxes.length; i++) {
+                var query = query_boxes[i].getElementsByClassName('prompt')[0].value;
+                if(query == '') break;
+                query_words.push(query);
+            }
+            if(query_words.length==0) return;
+
+            $.getJSON('/get_similarity', {
+                words: JSON.stringify(query_words)
+            }, function(data) {
+                candidate.forEach(function(c) {
+                    c.pos[0] = 0;
+                    c.pos[1] = 0;
+                })
+                data.forEach(function(d, i) {
+                    candidate.forEach(function(c) { c.pos[i] = d[c.name]; }); 
+                });
+                update(query_words);
+            });
+        });
+    });
+    </script>
+</head>
+<body>
+<div class="ui grid" style="padding-bottom: 30px;">
+    <div class="row" style="padding-left: 30px; padding-bottom: 0.7rem;">
+        <h1 class="title"> 누가 왕이 될 상이오? </h1>
+    </div>
+    <hr width="100%" style="border-top: 2px solid #adb5bd;">
+    <div class="row">
+        <div class="ten wide column">
+            <div id="plot"></div>
+        </div>
+        <div class="six wide column">
+            <div class="row input_box">
+                <h3> 좌표 단어를 입력하세요 </h3>
+                <div style="margin-bottom: 16px;">
+                    <span class="ui search axisWord">
+                        <div class="ui icon input">
+                            <input class="prompt query" type="text" placeholder="axis1">
+                            <i class="search icon"></i>
+                        </div>
+                        <div class="results"></div>
+                    </span>
+                    <span class="ui search axisWord">
+                        <div class="ui icon input">
+                            <input class="prompt query" type="text" placeholder="axis2">
+                            <i class="search icon"></i>
+                        </div>
+                        <div class="results"></div>
+                    </span> &nbsp;&nbsp;
+                    <button class="ui primary button apply">Apply</button>
+                </div>
+            </div>
+            <hr class="side_line">
+            <div class="row candidate_info" style="height: auto; min-height: 180px;">
+                <h3 style="margin-bottom: 15px;"> 대선 후보 정보 </h3>
+                <div class="ui grid">
+                    <div class="row image_div">
+                        <div class="three wide column" style="top: 25px;">
+                            <img class="ui tiny circular image" src="/static/img/who.jpg" style="float: left;">
+                        </div>
+                        <div class="thirteen wide column" style="font-size: 16.5px; top: 60%;"> 각 점(후보)를 클릭해주세요! </div>
+                    </div>
+                    {% for candidate in candidates %}
+                    <div class="row image_div" id="div_{{candidate['name']}}" style="display: none">
+                        <div class="three wide column" style="top: 30px;">
+                            <img class="ui tiny circular image image_candidate" src="/static/img/{{candidate['name']}}.jpeg" style="float: left;">
+                        </div>
+                        <div class="twelve wide column">
+                            <div style="font-size: 15px; margin-bottom: 8px;">
+                                이름: <span style="font-size: 17px;">{{ candidate['name'] }}</span><br>
+                                출생: {{ candidate['birth'] }} <br>
+                                정당: {{ candidate['party'] }} <br>
+                                득표율: {{ candidate['rate'] }}% <br>
+                            </div>
+                            <span style="font-size: 13.5px;">
+                                {% for pledge in candidate['pledges'] %}
+                                {{loop.index}}. {{ pledge }}<br>
+                                {% endfor %}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <hr class="side_line">
+            <div class="row related_articles">
+                <h3> 관련 기사 </h3>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="tooltip", style="opacity: 0; display: none;"></div>
+<div class="footer">
+    <hr>
+    Copyrightⓒ2017 by Kyeongpil Kang, rudvlf0413@korea.ac.kr
+</div>
+<script>
+$('.query').width($('.input_box').width()*0.22);
+$('.apply').width($('.input_box').width()*0.1);
+
+var plot_div = $('#plot'),
+    margin = {top: 20, right: 10, bottom: 20, left: 40},
+    width = plot_div.width() - margin.left - margin.right,
+    height = 520 - margin.top - margin.bottom,
+    tooltip = d3.select('div.tooltip');
+
+var xVal = function(d){ return d.pos[0]; },
+    yVal = function(d){ return d.pos[1]; };
+
+var xScale = d3.scale.linear().range([0, width-70]),
+    xAxis = d3.svg.axis().scale(xScale).orient("bottom");
+
+var yScale = d3.scale.linear().range([height, 0]),
+    yAxis = d3.svg.axis().scale(yScale).orient("left");
+
+var svg = d3.select("#plot").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+var xAxis_g, xAxis_text, yAxis_g, yAxis_text, legend;
+
+function initialize() {
+    var getRate = function(d){ return d.rate; };
+    xScale.domain([d3.min(candidate, getRate)-1, d3.max(candidate, getRate)+1]);
+    yScale.domain([d3.min(candidate, getRate)-1, d3.max(candidate, getRate)+1]);
+
+    xAxis_g = svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis),
+    xAxis_text = xAxis_g.append("text")
+        .attr("class", "label")
+        .attr("x", width-30)
+        .attr("y", -5)
+        .style("text-anchor", "end")
+        .text("득표율");
+
+    yAxis_g = svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis),
+    yAxis_text = yAxis_g.append("text")
+        .attr("class", "label")
+        .attr("x", 10)
+        .attr("y", 2)
+        .attr("dy", ".71em")
+        .style("text-anchor", "start")
+        .text("득표율");
+
+    svg.selectAll(".dot")
+        .data(candidate)
+        .enter().append("circle")
+        .attr("class", "dot")
+        .attr("r", function(d) { return 5 + 11*d.rate/maxRate; })
+        .attr("cx", function(d) { return xScale(d.pos[0]); })
+        .attr("cy", function(d) { return yScale(d.pos[1]); })
+        .style("fill", function(d) { return d.color; }) 
+        .on("mouseover", function(d) {
+            var text = '<b>'+d.name + '</b><br>'+d.similar_words.join(' '),
+                curserX = d3.event.pageX,
+                curserY = d3.event.pageY;
+            var posX, posY;
+
+            if(curserX < 500) posX = curserX + 20;
+            else posX = curserX - 240;
+            posY = curserY - 25;
+            if(curserY < 150) posY = posY + 30;
+            else if(curserY > 500) posY = posY - 75;
+
+            tooltip.transition()
+                .duration(400)
+                .style("opacity", .8);
+            tooltip.html(text)
+                .attr('class', 'tooltip')
+                .style("left", posX + "px")
+                .style("top", posY + "px")
+                .style('display', 'block');
+        })
+        .on("mouseout", function(d) {
+            tooltip.transition()
+               .duration(500)
+               .style("opacity", 0);
+        })
+        .on('click', function(d) {
+            if($('#div_'+d.name).css('display')=='block') return;
+
+            $('.image_div').css('display', 'none');
+            $('#div_'+d.name).css('display', 'block');
+            
+            var candidate_name = d.name,
+                query_words = [],
+                query_tags = $('.query');
+
+            for(var i=0; i<query_tags.length; i++) {
+                var word = query_tags[i].value;
+                if(word != '') query_words.push(word);
+            }
+
+            $.getJSON('/get_related_articles', {
+                candidate: candidate_name,
+                words: JSON.stringify(query_words)
+            }, function(data) {
+                var titles = data.titles;
+                if(titles.length == 0) return;
+
+                var div_box = $('.related_articles')[0];
+                div_box.innerHTML = "<h3>관련 기사</h3><div class='textBox'>"+titles.join("<br>")+"</div>";
+            });
+        });
+
+    legend = svg.selectAll(".legend")
+        .data(candidate)
+        .enter().append("g")
+        .attr("class", "legend")
+        .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+    legend.append("rect")
+        .attr("x", width - 18)
+        .attr("width", 18)
+        .attr("height", 18)
+        .style("fill", function(d) { return d.color; });
+    legend.append("text")
+        .attr("x", width - 25)
+        .attr("y", 9)
+        .attr("dy", ".35em")
+        .style("text-anchor", "end")
+        .text(function(d) { return d['name']; });
+}
+
+function update(query_words) {
+    xScale.domain([d3.min(candidate, xVal)*0.95, d3.max(candidate, xVal)*1.05]);
+    xAxis_text.text(query_words[0]);
+    
+    if(query_words.length == 2) {
+        yAxis_text.text(query_words[1]);
+        yScale.domain([d3.min(candidate, yVal)*0.95, d3.max(candidate, yVal)*1.05]);
+    } else {
+        yScale.domain([-0.5, 0.5]);
+        yAxis_text.text('');
+    }
+    
+    xAxis_g.call(xAxis);
+    yAxis_g.call(yAxis);
+    svg.selectAll('.dot')
+        .data(candidate)
+        .transition()
+        .ease('quadin')
+        .duration(800)
+        .attr('cx', function(d) { return xScale(d.pos[0]); })
+        .attr('cy', function(d) { return yScale(d.pos[1]); });
+}
+
+initialize();
+</script>
+</body>
+</html>

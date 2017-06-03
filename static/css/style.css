@@ -1,0 +1,40 @@
+html {
+    padding-left: 10px;
+    padding-top: 15px;
+}
+hr {
+    display: block;
+    height: 0px;
+    border: 1;
+    border-top: 1px solid #ccc;
+    margin: 0.3em;
+    padding: 0; 
+}
+h1,h2,h3,h4,h5 {
+    margin: calc(2rem - .14285714em) 0 0.4rem;
+}
+.title {
+    font-family: 'Nanum Brush Script', serif;
+}
+.textBox {
+    width: 95%;
+    height: 180px;
+    overflow: auto;
+    border: 0px;
+}
+.side_line {
+    margin: 1em;
+}
+.tooltip {
+    background-color: #ffffff;
+    width: 215px;
+    height: auto;
+    border: 1px solid #bababa;
+    padding: 3px;
+}
+.footer{
+    width: 100%;
+    text-align: center;
+    height: 30px;
+    font-size: 1.1em;
+}
