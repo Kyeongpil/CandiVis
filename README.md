@@ -6,6 +6,7 @@ It is visualization system that visualize Korean 19th presidential election cand
 
 
 ![페이지 화면](images/image.png)
+![페이지 화면2](images/image2.png)
 
 
 ## Dependency
