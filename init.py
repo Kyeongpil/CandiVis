@@ -6,15 +6,23 @@ from scipy.sparse import csr_matrix
 from candidate_info import candidates
 from math import log
 import numpy as np
+import ujson as json
 import pickle
-import json
 
 
 def load_sparse_csr(filename):
     loader = np.load(filename)
-    return csr_matrix(
-        (loader['data'], loader['indices'], loader['indptr']),
-        shape=loader['shape'])
+    return csr_matrix((loader['data'], loader['indices'], loader['indptr']), shape=loader['shape'])
+
+
+def get_similar_words_(word, topn=300, num=10):
+    words = model.similar_by_word(word, topn=topn)
+    words = [(w, sim) for (w, sim) in words if len(w) > 1 and w not in spam]
+    words = [(w, sim*log(vocaDict[w].count)) for (w, sim) in words]
+    words = sorted(words, key=lambda x: x[1], reverse=True)[:num]
+    words = [w[0] for w in words]
+    return words
+
 
 # Configuration
 app = Flask(__name__, static_path='/static')
@@ -31,11 +39,7 @@ num_return_articles = 15
 
 for c in candidates:
     spam = set(['후보', c['name'][:2], c['name'][1:], c['name']])
-    words = model.similar_by_word(c['name'], topn=200)
-    words = [(w, sim) for (w, sim) in words if len(w) > 1 and w not in spam]
-    words = [(w, sim*log(vocaDict[w].count)) for (w, sim) in words]
-    words = sorted(words, key=lambda x: x[1], reverse=True)[:10]
-    c['similar_words'] = [w[0] for w in words]
+    c['similar_words'] = get_similar_words_(c['name'])
 
 
 @app.route('/get_related_articles')
@@ -45,7 +49,7 @@ def get_related_articles():
 
     if len(axis_words) > 0:
         indices = [voca2index[w] for w in axis_words]
-        indices = tdm[:, indices].sum(axis=1).argsort(axis=0)[::-1][:200]
+        indices = tdm[:, indices].sum(axis=1).argsort(axis=0)[::-1][:300]
         indices = indices.transpose().tolist()[0]
         related_titles = [titles[i] for i in indices if candidate in titles[i]]
         related_titles = related_titles[:num_return_articles]
@@ -70,14 +74,19 @@ def recommend_words():
         words.insert(0, query_string)
         words.pop(-1)
 
-    words = [{'word': word} for word in words]
-    return jsonify(words=words)
+    return jsonify(words=[{'word': word} for word in words])
 
 
 @app.route('/get_similarity')
 def get_word_vectors():
     axis_words = json.loads(request.args.get('words'))
     return json.dumps([{c['name']: round(model.similarity(c['name'], w), 5) for c in candidates} for w in axis_words])
+
+
+@app.route('/get_similar_words')
+def get_similar_words():
+    word = request.args.get('word')
+    return json.dumps(get_similar_words_(word))
 
 
 @app.route('/', methods=['GET', 'POST'])

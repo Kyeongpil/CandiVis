@@ -43,10 +43,7 @@
             $.getJSON('/get_similarity', {
                 words: JSON.stringify(query_words)
             }, function(data) {
-                candidate.forEach(function(c) {
-                    c.pos[0] = 0;
-                    c.pos[1] = 0;
-                })
+                candidate.forEach(function(c) { c.pos = [0, 0]; })
                 data.forEach(function(d, i) {
                     candidate.forEach(function(c) { c.pos[i] = d[c.name]; }); 
                 });
@@ -111,7 +108,7 @@
                             </div>
                             <span style="font-size: 13.5px;">
                                 {% for pledge in candidate['pledges'] %}
-                                {{loop.index}}. {{ pledge }}<br>
+                                {{loop.index}}. {{ pledge }} <br>
                                 {% endfor %}
                             </span>
                         </div>
@@ -131,6 +128,7 @@
     <hr>
     Copyrightⓒ2017 by Kyeongpil Kang, rudvlf0413@korea.ac.kr
 </div>
+
 <script>
 $('.query').width($('.input_box').width()*0.22);
 $('.apply').width($('.input_box').width()*0.1);
@@ -172,7 +170,24 @@ function initialize() {
         .attr("x", width-30)
         .attr("y", -5)
         .style("text-anchor", "end")
-        .text("득표율");
+        .text("득표율")
+        .on('mouseover', function() {
+            $.getJSON('/get_similar_words', {
+                word: xAxis_text.text()
+            }, function(words) {
+                tooltip.transition()
+                    .duration(400)
+                    .style("opacity", .8);
+                tooltip.html(words.join(" "))
+                    .attr('class', 'tooltip')
+                    .style("left", (width-170) + "px")
+                    .style("top", (height+30) + "px")
+                    .style('display', 'block');
+            })
+        })
+        .on('mouseout', function() {
+            tooltip.transition().duration(500).style("opacity", 0);
+        });
 
     yAxis_g = svg.append("g")
         .attr("class", "y axis")
@@ -183,7 +198,24 @@ function initialize() {
         .attr("y", 2)
         .attr("dy", ".71em")
         .style("text-anchor", "start")
-        .text("득표율");
+        .text("득표율")
+        .on('mouseover', function() {
+            $.getJSON('/get_similar_words', {
+                word: yAxis_text.text()
+            }, function(words) {
+                tooltip.transition()
+                    .duration(400)
+                    .style("opacity", .8);
+                tooltip.html(words.join(" "))
+                    .attr('class', 'tooltip')
+                    .style("left", 110 + "px")
+                    .style("top", 105 + "px")
+                    .style('display', 'block');
+            })
+        })
+        .on('mouseout', function() {
+            tooltip.transition().duration(500).style("opacity", 0);
+        });
 
     svg.selectAll(".dot")
         .data(candidate)
@@ -203,7 +235,7 @@ function initialize() {
             else posX = curserX - 240;
             posY = curserY - 25;
             if(curserY < 150) posY = posY + 30;
-            else if(curserY > 500) posY = posY - 75;
+            else if(curserY > 500) posY = posY - 55;
 
             tooltip.transition()
                 .duration(400)
@@ -215,9 +247,7 @@ function initialize() {
                 .style('display', 'block');
         })
         .on("mouseout", function(d) {
-            tooltip.transition()
-               .duration(500)
-               .style("opacity", 0);
+            tooltip.transition().duration(500).style("opacity", 0);
         })
         .on('click', function(d) {
             if($('#div_'+d.name).css('display')=='block') return;
