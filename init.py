@@ -15,7 +15,7 @@ def load_sparse_csr(filename):
     return csr_matrix((loader['data'], loader['indices'], loader['indptr']), shape=loader['shape'])
 
 
-def get_similar_words_(word, topn=300, num=10):
+def get_similar_words_(word, topn=200, num=10):
     words = model.similar_by_word(word, topn=topn)
     words = [(w, sim) for (w, sim) in words if len(w) > 1 and w not in spam]
     words = [(w, sim*log(vocaDict[w].count)) for (w, sim) in words]
@@ -37,8 +37,9 @@ voca = model.index2word
 vocaDict = model.vocab
 num_return_articles = 15
 
+spam = set(['후보'])
 for c in candidates:
-    spam = set(['후보', c['name'][:2], c['name'][1:], c['name']])
+    spam.update([c['name'][:2], c['name'][1:]])
     c['similar_words'] = get_similar_words_(c['name'])
 
 

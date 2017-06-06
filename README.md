@@ -15,7 +15,6 @@ It is visualization system that visualize Korean 19th presidential election cand
 * Flask (Web server framework)
 * Gensim (word2vec library)
 * BeautifulSoup (web parsing library)
-* newspaper (python web scraper library)
 * Konlpy (Korean NLP library)
 * Semantic UI (Web ui library, It is already in source directory )
 
