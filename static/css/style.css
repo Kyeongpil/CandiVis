@@ -15,6 +15,7 @@ h1,h2,h3,h4,h5 {
 }
 .title {
     font-family: 'Nanum Brush Script', serif;
+    font-size: 36px;
 }
 .textBox {
     width: 95%;
