@@ -25,7 +25,7 @@ def get_similar_words_(word, topn=200, num=10):
 
 
 # Configuration
-app = Flask(__name__, static_path='/static')
+app = Flask(__name__, static_folder='/static')
 
 with open("article_data.pkl", 'rb') as f:
     titles = pickle.load(f)
