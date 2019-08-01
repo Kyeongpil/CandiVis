@@ -25,7 +25,7 @@ def get_similar_words_(word, topn=200, num=10):
 
 
 # Configuration
-app = Flask(__name__, static_folder='/static')
+app = Flask(__name__, static_url_path='/static')
 
 with open("article_data.pkl", 'rb') as f:
     titles = pickle.load(f)
@@ -81,7 +81,7 @@ def recommend_words():
 @app.route('/get_similarity')
 def get_word_vectors():
     axis_words = json.loads(request.args.get('words'))
-    return json.dumps([{c['name']: round(model.similarity(c['name'], w), 5) for c in candidates} for w in axis_words])
+    return json.dumps([{c['name']: round(float(model.similarity(c['name'], w)), 5) for c in candidates} for w in axis_words])
 
 
 @app.route('/get_similar_words')
