@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from flask import Flask, request, render_template, jsonify
+from flask_cors import CORS
 from gensim.models import KeyedVectors
 from scipy.sparse import csr_matrix
 from candidate_info import candidates
@@ -26,6 +27,7 @@ def get_similar_words_(word, topn=200, num=10):
 
 # Configuration
 app = Flask(__name__, static_url_path='/static')
+CORS(app)
 
 with open("article_data.pkl", 'rb') as f:
     titles = pickle.load(f)

@@ -1,5 +1,5 @@
-__pycache__/candidate_info.cpython-37.pyc
 .DS_Store
 .ipynb_checkpoints/train_word2vec-checkpoint.ipynb
 tdm.npz
 word2vec.txt
+**/*.pyc
