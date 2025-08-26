@@ -1,54 +1,55 @@
-# -*- coding: utf-8 -*-
+import pickle
+from math import log
 
-from flask import Flask, request, render_template, jsonify
+import numpy as np
+import ujson as json
+from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from gensim.models import KeyedVectors
 from scipy.sparse import csr_matrix
+
 from candidate_info import candidates
-from math import log
-import numpy as np
-import ujson as json
-import pickle
 
 
 def load_sparse_csr(filename):
     loader = np.load(filename)
-    return csr_matrix((loader['data'], loader['indices'], loader['indptr']), shape=loader['shape'])
+    return csr_matrix((loader["data"], loader["indices"], loader["indptr"]), shape=loader["shape"])
 
 
-def get_similar_words_(word, topn=200, num=10):
+def get_similar_words_(word: str, model: KeyedVectors, topn: int = 200, num: int = 10):
     words = model.similar_by_word(word, topn=topn)
     words = [(w, sim) for (w, sim) in words if len(w) > 1 and w not in spam]
-    words = [(w, sim*log(vocaDict[w].count)) for (w, sim) in words]
+    # words = [(w, sim * log(vocaDict[w].count)) for (w, sim) in words]
+    words = [(w, sim) for (w, sim) in words]
     words = sorted(words, key=lambda x: x[1], reverse=True)[:num]
     words = [w[0] for w in words]
     return words
 
 
 # Configuration
-app = Flask(__name__, static_url_path='/static')
+app = Flask(__name__, static_url_path="/static")
 CORS(app)
 
-with open("article_data.pkl", 'rb') as f:
+with open("article_data.pkl", "rb") as f:
     titles = pickle.load(f)
     voca2index = pickle.load(f)
-tdm = load_sparse_csr('tdm.npz')
+tdm = load_sparse_csr("tdm.npz")
 
-model = KeyedVectors.load_word2vec_format('word2vec.txt')
-voca = model.index2word
-vocaDict = model.vocab
+model: KeyedVectors = KeyedVectors.load_word2vec_format("word2vec.txt")
+vocaDict = model.key_to_index
+voca = list(vocaDict.keys())
 num_return_articles = 15
 
-spam = set(['후보'])
+spam = set(["후보"])
 for c in candidates:
-    spam.update([c['name'][:2], c['name'][1:]])
-    c['similar_words'] = get_similar_words_(c['name'])
+    spam.update([c["name"][:2], c["name"][1:]])
+    c["similar_words"] = get_similar_words_(c["name"], model)
 
 
-@app.route('/get_related_articles')
+@app.route("/get_related_articles")
 def get_related_articles():
-    axis_words = json.loads(request.args.get('words'))
-    candidate = request.args.get('candidate')
+    axis_words = json.loads(request.args.get("words"))
+    candidate = request.args.get("candidate")
 
     if len(axis_words) > 0:
         indices = [voca2index[w] for w in axis_words]
@@ -63,9 +64,9 @@ def get_related_articles():
     return jsonify(titles=related_titles)
 
 
-@app.route('/recommend_words')
+@app.route("/recommend_words")
 def recommend_words():
-    query_string = request.args.get('query')
+    query_string = request.args.get("query")
     words = []
     for word in voca:
         if word.startswith(query_string):
@@ -77,26 +78,28 @@ def recommend_words():
         words.insert(0, query_string)
         words.pop(-1)
 
-    return jsonify(words=[{'word': word} for word in words])
+    return jsonify(words=[{"word": word} for word in words])
 
 
-@app.route('/get_similarity')
+@app.route("/get_similarity")
 def get_word_vectors():
-    axis_words = json.loads(request.args.get('words'))
-    return json.dumps([{c['name']: round(float(model.similarity(c['name'], w)), 5) for c in candidates} for w in axis_words])
+    axis_words = json.loads(request.args.get("words"))
+    return json.dumps(
+        [{c["name"]: round(float(model.similarity(c["name"], w)), 5) for c in candidates} for w in axis_words]
+    )
 
 
-@app.route('/get_similar_words')
+@app.route("/get_similar_words")
 def get_similar_words():
-    word = request.args.get('word')
-    return json.dumps(get_similar_words_(word))
+    word = request.args.get("word")
+    return json.dumps(get_similar_words_(word, model))
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route("/", methods=["GET", "POST"])
 def main():
-    return render_template('index.html', candidates=candidates)
+    return render_template("index.html", candidates=candidates)
 
 
 # Execute the main program
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=5015)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", debug=True, port=5015)
