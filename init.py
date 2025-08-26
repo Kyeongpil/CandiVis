@@ -19,6 +19,7 @@ def load_sparse_csr(filename):
 def get_similar_words_(word: str, model: KeyedVectors, topn: int = 200, num: int = 10):
     words = model.similar_by_word(word, topn=topn)
     words = [(w, sim) for (w, sim) in words if len(w) > 1 and w not in spam]
+    # gensim 새 버전에서 count를 제공 안하고 있어서 주석 처리. 추후에 별도로 전처리하면서 빈도를 저장해야할듯
     # words = [(w, sim * log(vocaDict[w].count)) for (w, sim) in words]
     words = [(w, sim) for (w, sim) in words]
     words = sorted(words, key=lambda x: x[1], reverse=True)[:num]
